@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 300px;
+    background: #0a0a0a;
+    color: #f0f0f0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+  }
+  .header {
+    padding: 16px;
+    border-bottom: 1px solid #1f1f1f;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo {
+    width: 32px; height: 32px;
+    background: #7c3aed;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: white;
+    flex-shrink: 0;
+  }
+  .logo-text { font-size: 16px; font-weight: 700; }
+  .tagline { font-size: 11px; color: #666; margin-top: 1px; }
+  .status {
+    padding: 12px 16px;
+    background: #111;
+    border-bottom: 1px solid #1f1f1f;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #9ca3af;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #ef4444;
+    flex-shrink: 0;
+  }
+  .dot.connected { background: #22c55e; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .section { padding: 14px 16px; border-bottom: 1px solid #1a1a1a; }
+  .section-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #444;
+    margin-bottom: 10px;
+  }
+  .key-input {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 11px;
+    color: #f0f0f0;
+    font-family: monospace;
+    outline: none;
+  }
+  .key-input:focus { border-color: #7c3aed; }
+  .save-btn {
+    width: 100%;
+    margin-top: 8px;
+    background: #7c3aed;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .save-btn:hover { background: #6d28d9; }
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .stat {
+    background: #111;
+    border: 1px solid #1f1f1f;
+    border-radius: 8px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .stat-val { font-size: 20px; font-weight: 700; line-height: 1; }
+  .stat-val.green { color: #22c55e; }
+  .stat-val.red { color: #ef4444; }
+  .stat-val.purple { color: #7c3aed; }
+  .stat-label { font-size: 10px; color: #555; margin-top: 4px; }
+  .platforms { display: flex; flex-direction: column; gap: 6px; }
+  .platform {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #111;
+    border: 1px solid #1f1f1f;
+    border-radius: 7px;
+    font-size: 12px;
+  }
+  .platform-icon { font-size: 16px; }
+  .platform-name { flex: 1; color: #d1d5db; }
+  .platform-status { font-size: 10px; color: #22c55e; }
+  .footer {
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer a {
+    color: #7c3aed;
+    font-size: 11px;
+    text-decoration: none;
+  }
+  .version { font-size: 10px; color: #333; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Z</div>
+  <div>
+    <div class="logo-text">Zerify</div>
+    <div class="tagline">Zerify verifies, that AI did what it claimed</div>
+  </div>
+</div>
+
+<div class="status">
+  <div class="dot" id="statusDot"></div>
+  <span id="statusText">Checking connection...</span>
+</div>
+
+<div class="section">
+  <div class="section-title">API Key</div>
+  <input class="key-input" type="text" id="apiKey" placeholder="zfy_sk_..." />
+  <button class="save-btn" onclick="saveKey()">Save key</button>
+</div>
+
+<div class="section">
+  <div class="section-title">Session stats</div>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-val purple" id="totalStat">—</div>
+      <div class="stat-label">total</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val green" id="passStat">—</div>
+      <div class="stat-label">passed</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val red" id="failStat">—</div>
+      <div class="stat-label">caught</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Active on</div>
+  <div class="platforms">
+    <div class="platform">
+      <div class="platform-icon">🤖</div>
+      <div class="platform-name">ChatGPT</div>
+      <div class="platform-status">✓ active</div>
+    </div>
+    <div class="platform">
+      <div class="platform-icon">✦</div>
+      <div class="platform-name">Claude</div>
+      <div class="platform-status">✓ active</div>
+    </div>
+    <div class="platform">
+      <div class="platform-icon">✦</div>
+      <div class="platform-name">Gemini</div>
+      <div class="platform-status">✓ active</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <a href="http://localhost:8000/dashboard" target="_blank">Open dashboard →</a>
+  <div class="version">v1.0.0</div>
+</div>
+
+<script>
+const API = "http://localhost:8000";
+
+async function checkConnection() {
+  try {
+    const r = await fetch(API + "/");
+    if (r.ok) {
+      document.getElementById("statusDot").className = "dot connected";
+      document.getElementById("statusText").textContent = "Connected to Zerify API";
+      loadStats();
+    } else {
+      throw new Error();
+    }
+  } catch {
+    document.getElementById("statusDot").className = "dot";
+    document.getElementById("statusText").textContent = "Not connected — start Zerify server";
+  }
+}
+
+async function loadStats() {
+  try {
+    const r = await fetch(API + "/dashboard/data");
+    const d = await r.json();
+    document.getElementById("totalStat").textContent = d.total || 0;
+    document.getElementById("passStat").textContent = d.passed || 0;
+    document.getElementById("failStat").textContent = d.failed || 0;
+  } catch {}
+}
+
+function saveKey() {
+  const key = document.getElementById("apiKey").value.trim();
+  if (!key) return;
+  chrome.storage.sync.set({ zerifyApiKey: key }, () => {
+    const btn = document.querySelector(".save-btn");
+    btn.textContent = "Saved!";
+    setTimeout(() => btn.textContent = "Save key", 1500);
+  });
+}
+
+// Load saved key
+chrome.storage.sync.get(["zerifyApiKey"], (result) => {
+  if (result.zerifyApiKey) {
+    document.getElementById("apiKey").value = result.zerifyApiKey;
+  }
+});
+
+checkConnection();
+</script>
+</body>
+</html>

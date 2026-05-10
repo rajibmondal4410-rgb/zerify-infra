@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zerify Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #181818;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0f0f0;
+    --text2: #888;
+    --text3: #555;
+    --green: #22c55e;
+    --green-dim: rgba(34,197,94,0.12);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,0.12);
+    --amber: #f59e0b;
+    --amber-dim: rgba(245,158,11,0.1);
+    --blue: #3b82f6;
+    --blue-dim: rgba(59,130,246,0.1);
+    --accent: #a78bfa;
+    --accent-dim: rgba(167,139,250,0.1);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Syne', system-ui, sans-serif;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .logo-mark {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff;
+  }
+  .status-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text2);
+    font-family: var(--mono);
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .api-key-display {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .api-key-display:hover { border-color: var(--border2); color: var(--text); }
+
+  /* MAIN LAYOUT */
+  .main { display: flex; min-height: calc(100vh - 57px); }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 220px;
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    flex-shrink: 0;
+  }
+  .nav-section {
+    padding: 0 12px;
+    margin-bottom: 24px;
+  }
+  .nav-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 0 8px;
+    margin-bottom: 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    color: var(--text2);
+    transition: all 0.15s;
+    font-size: 13px;
+  }
+  .nav-item:hover { background: var(--surface); color: var(--text); }
+  .nav-item.active { background: var(--accent-dim); color: var(--accent); }
+  .nav-icon {
+    width: 16px; height: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  /* CONTENT */
+  .content { flex: 1; padding: 24px; overflow-x: hidden; }
+
+  /* STATS ROW */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: var(--border2); }
+  .stat-label {
+    font-size: 11px;
+    color: var(--text2);
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .stat-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.accent { color: var(--accent); }
+
+  /* SECTION HEADING */
+  .section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-size: 13px; font-weight: 500;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: var(--mono);
+  }
+  .refresh-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text2); padding: 5px 12px;
+    border-radius: var(--radius); cursor: pointer;
+    font-size: 11px; font-family: var(--mono);
+    transition: all 0.15s;
+  }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* CHART BAR */
+  .chart-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px; margin-bottom: 24px;
+  }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+  }
+  .chart-title {
+    font-size: 12px; color: var(--text2);
+    font-family: var(--mono); margin-bottom: 14px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .bar-label { width: 60px; color: var(--text2); font-family: var(--mono); flex-shrink: 0; }
+  .bar-track {
+    flex: 1; height: 6px;
+    background: var(--surface2);
+    border-radius: 3px; overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; border-radius: 3px;
+    transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  }
+  .bar-count { width: 24px; text-align: right; color: var(--text3); font-family: var(--mono); }
+
+  /* PASS RATE DONUT */
+  .donut-wrap {
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px; padding: 8px 0;
+  }
+  .donut-value { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; }
+  .donut-label { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+
+  /* VERIFICATIONS TABLE */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .table-head {
+    display: grid;
+    grid-template-columns: 60px 90px 1fr 80px 70px 100px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .table-body { max-height: 400px; overflow-y: auto; }
+  .table-row {
+    display: grid;
+    grid-template-columns: 60px 90px 1fr 80px 70px 100px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    transition: background 0.15s;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  .table-row:hover { background: var(--surface2); }
+  .table-row:last-child { border-bottom: none; }
+  .cell { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cell.mono { font-family: var(--mono); }
+  .cell.muted { color: var(--text2); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 4px;
+    font-size: 10px; font-weight: 500;
+    font-family: var(--mono); letter-spacing: 0.04em;
+  }
+  .badge.pass { background: var(--green-dim); color: var(--green); }
+  .badge.fail { background: var(--red-dim); color: var(--red); }
+  .badge.type-code { background: var(--blue-dim); color: var(--blue); }
+  .badge.type-text { background: var(--accent-dim); color: var(--accent); }
+  .badge.type-image { background: var(--amber-dim); color: var(--amber); }
+  .badge.type-script { background: rgba(20,184,166,0.1); color: #14b8a6; }
+  .badge.type-file { background: rgba(156,163,175,0.1); color: #9ca3af; }
+
+  .conf-bar {
+    width: 40px; height: 4px;
+    background: var(--surface2);
+    border-radius: 2px; overflow: hidden; display: inline-block;
+  }
+  .conf-fill { height: 100%; background: var(--green); border-radius: 2px; }
+
+  /* RETRY PANEL */
+  .retry-section { margin-bottom: 24px; }
+  .retry-card {
+    background: var(--surface);
+    border: 1px solid var(--red);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-top: 10px;
+    display: none;
+  }
+  .retry-card.visible { display: block; animation: fadeIn 0.3s ease; }
+  .retry-intent { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-bottom: 6px; }
+  .retry-reason { font-size: 13px; color: var(--red); margin-bottom: 10px; }
+  .retry-prompt-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    line-height: 1.6;
+  }
+  .retry-label {
+    font-size: 10px; color: var(--text3);
+    font-family: var(--mono); text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 6px;
+  }
+
+  /* DEMO PANEL */
+  .demo-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .demo-title { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .demo-sub { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-bottom: 16px; }
+  .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .demo-field { display: flex; flex-direction: column; gap: 5px; }
+  .demo-label { font-size: 10px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .demo-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .demo-input:focus { border-color: var(--accent); }
+  .demo-textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%; resize: vertical;
+    min-height: 80px;
+  }
+  .demo-textarea:focus { border-color: var(--accent); }
+  .demo-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    outline: none;
+    width: 100%;
+  }
+  .verify-btn {
+    width: 100%;
+    padding: 10px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: opacity 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .verify-btn:hover { opacity: 0.9; }
+  .verify-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .result-box {
+    margin-top: 14px;
+    border-radius: var(--radius);
+    padding: 14px;
+    display: none;
+  }
+  .result-box.visible { display: block; animation: fadeIn 0.3s ease; }
+  .result-box.pass { background: var(--green-dim); border: 1px solid rgba(34,197,94,0.3); }
+  .result-box.fail { background: var(--red-dim); border: 1px solid rgba(239,68,68,0.3); }
+  .result-status { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .result-status.pass { color: var(--green); }
+  .result-status.fail { color: var(--red); }
+  .result-meta { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-bottom: 8px; }
+  .result-retry {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 10px;
+    font-size: 11px; font-family: var(--mono);
+    color: var(--amber);
+    margin-top: 8px; line-height: 1.5;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--text3); font-family: var(--mono); font-size: 12px;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-mark">Z</div>
+    Zerify
+  </div>
+  <div style="display:flex; align-items:center; gap:16px;">
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      API live
+    </div>
+    <div class="api-key-display" id="keyDisplay" onclick="copyKey()">
+      <span id="keyText">loading key...</span>
+      <span style="font-size:10px; opacity:0.5;">copy</span>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Monitor</div>
+      <div class="nav-item active" onclick="showTab('overview')">
+        <div class="nav-icon">◈</div> Overview
+      </div>
+      <div class="nav-item" onclick="showTab('history')">
+        <div class="nav-icon">◷</div> History
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Tools</div>
+      <div class="nav-item" onclick="showTab('demo')">
+        <div class="nav-icon">▷</div> Live demo
+      </div>
+      <div class="nav-item" onclick="showTab('keys')">
+        <div class="nav-icon">⊕</div> API keys
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Resources</div>
+      <div class="nav-item" onclick="window.open('/docs','_blank')">
+        <div class="nav-icon">⌥</div> API docs
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OVERVIEW TAB -->
+    <div id="tab-overview">
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-label">Total verified</div>
+          <div class="stat-value accent" id="statTotal">0</div>
+          <div class="stat-sub">all time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Passed</div>
+          <div class="stat-value green" id="statPassed">0</div>
+          <div class="stat-sub">verified ✓</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Failed</div>
+          <div class="stat-value red" id="statFailed">0</div>
+          <div class="stat-sub">caught & fixed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pass rate</div>
+          <div class="stat-value amber" id="statRate">—</div>
+          <div class="stat-sub">accuracy</div>
+        </div>
+      </div>
+
+      <div class="chart-row">
+        <div class="chart-card">
+          <div class="chart-title">By task type</div>
+          <div class="bar-chart" id="typeChart">
+            <div class="empty-state">No verifications yet</div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Pass rate</div>
+          <div class="donut-wrap">
+            <div class="donut-value accent" id="donutValue">—</div>
+            <div class="donut-label">of all AI claims verified correct</div>
+            <svg width="120" height="8" style="margin-top:8px;">
+              <rect x="0" y="0" width="120" height="8" rx="4" fill="rgba(239,68,68,0.2)"/>
+              <rect x="0" y="0" id="donutBar" width="0" height="8" rx="4" fill="#22c55e"/>
+            </svg>
+            <div style="font-size:10px; color:var(--text3); font-family:var(--mono); margin-top:4px;">
+              <span style="color:var(--green)">■</span> pass &nbsp; <span style="color:var(--red)">■</span> fail
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LAST FAILURE PANEL -->
+      <div class="retry-section">
+        <div class="section-head">
+          <div class="section-title">Last failure + retry prompt</div>
+          <div style="font-size:11px; color:var(--text3); font-family:var(--mono);">auto-updates</div>
+        </div>
+        <div class="retry-card" id="retryCard">
+          <div class="retry-intent" id="retryIntent"></div>
+          <div class="retry-reason" id="retryReason"></div>
+          <div class="retry-label">Zerify retry prompt →</div>
+          <div class="retry-prompt-box" id="retryPrompt"></div>
+        </div>
+        <div id="noFailures" style="font-size:12px; color:var(--text3); font-family:var(--mono); padding:12px 0;">No failures yet — run a verification to see retry prompts here.</div>
+      </div>
+
+      <!-- RECENT TABLE -->
+      <div class="section-head">
+        <div class="section-title">Recent verifications</div>
+        <button class="refresh-btn" onclick="loadData()">↻ refresh</button>
+      </div>
+      <div class="table-card">
+        <div class="table-head">
+          <div>ID</div>
+          <div>Type</div>
+          <div>Intent</div>
+          <div>Result</div>
+          <div>Conf.</div>
+          <div>Time</div>
+        </div>
+        <div class="table-body" id="recentTable">
+          <div class="empty-state">No verifications yet. Use the Live Demo tab or call POST /verify</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div id="tab-history" style="display:none;">
+      <div class="section-head">
+        <div class="section-title">All verifications</div>
+        <button class="refresh-btn" onclick="loadData()">↻ refresh</button>
+      </div>
+      <div class="table-card">
+        <div class="table-head">
+          <div>ID</div>
+          <div>Type</div>
+          <div>Intent</div>
+          <div>Result</div>
+          <div>Conf.</div>
+          <div>Time</div>
+        </div>
+        <div class="table-body" id="historyTable" style="max-height:600px;">
+          <div class="empty-state">No verifications yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEMO TAB -->
+    <div id="tab-demo" style="display:none;">
+      <div class="demo-panel">
+        <div class="demo-title">Live verification demo</div>
+        <div class="demo-sub">Test Zerify directly — pick a task type and submit</div>
+
+        <div class="demo-grid">
+          <div class="demo-field">
+            <div class="demo-label">Task type</div>
+            <select class="demo-select" id="demoType" onchange="updateDemoPlaceholders()">
+              <option value="code">code</option>
+              <option value="text">text</option>
+              <option value="script">script (youtube/blog)</option>
+              <option value="image">image</option>
+            </select>
+          </div>
+          <div class="demo-field">
+            <div class="demo-label">Intent (what was asked)</div>
+            <input class="demo-input" id="demoIntent" placeholder="Write a function that reverses a string" />
+          </div>
+        </div>
+
+        <div class="demo-field" style="margin-bottom:10px;">
+          <div class="demo-label">AI claim (what AI said it did)</div>
+          <input class="demo-input" id="demoClaim" placeholder="I have written the reverse_string function" />
+        </div>
+
+        <div class="demo-field" style="margin-bottom:14px;">
+          <div class="demo-label">Actual output (what AI actually produced)</div>
+          <textarea class="demo-textarea" id="demoOutput" placeholder="def reverse_string(s):&#10;    return s[::-1]&#10;&#10;print(reverse_string('hello'))"></textarea>
+        </div>
+
+        <button class="verify-btn" id="verifyBtn" onclick="runDemo()">
+          ▷ Run Zerify verification
+        </button>
+
+        <div class="result-box" id="resultBox">
+          <div class="result-status" id="resultStatus"></div>
+          <div class="result-meta" id="resultMeta"></div>
+          <div class="result-retry" id="resultRetry" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- PREFILL EXAMPLES -->
+      <div class="section-head"><div class="section-title">Quick examples</div></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:24px;">
+        <div class="stat-card" style="cursor:pointer;" onclick="prefill('code_pass')">
+          <div class="stat-label">Code ✓ pass</div>
+          <div style="font-size:12px; color:var(--text2); margin-top:4px; font-family:var(--mono);">Working add function</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer;" onclick="prefill('code_fail')">
+          <div class="stat-label">Code ✗ fail</div>
+          <div style="font-size:12px; color:var(--text2); margin-top:4px; font-family:var(--mono);">Broken syntax error</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer;" onclick="prefill('script_fail')">
+          <div class="stat-label">Script ✗ fail</div>
+          <div style="font-size:12px; color:var(--text2); margin-top:4px; font-family:var(--mono);">YouTube script too short</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KEYS TAB -->
+    <div id="tab-keys" style="display:none;">
+      <div class="demo-panel">
+        <div class="demo-title">API key management</div>
+        <div class="demo-sub">Create keys for your apps. Each key tracks its own usage.</div>
+
+        <div class="demo-field" style="margin-bottom:12px;">
+          <div class="demo-label">Key name (e.g. my-app, production)</div>
+          <input class="demo-input" id="newKeyName" placeholder="my-app" />
+        </div>
+        <button class="verify-btn" onclick="createNewKey()" style="max-width:200px; margin-bottom:20px;">
+          ⊕ Generate new key
+        </button>
+
+        <div id="newKeyResult" style="display:none; background:var(--surface2); border:1px solid var(--green); border-radius:var(--radius); padding:14px; margin-bottom:16px;">
+          <div class="retry-label">Your new API key</div>
+          <div class="retry-prompt-box" id="newKeyValue" style="margin-top:6px;"></div>
+          <div style="font-size:11px; color:var(--text3); font-family:var(--mono); margin-top:8px;">
+            Add to your requests: <span style="color:var(--amber)">headers = {"X-API-Key": "YOUR_KEY"}</span>
+          </div>
+        </div>
+
+        <div class="section-head" style="margin-top:8px;">
+          <div class="section-title">Demo key (for testing)</div>
+        </div>
+        <div class="retry-prompt-box" id="demoKeyBox" style="margin-top:8px; margin-bottom:16px; color:var(--text2);">loading...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = '';
+let demoKey = '';
+let allData = { total:0, passed:0, failed:0, pass_rate:0, by_type:{}, recent:[] };
+let autoRefresh = null;
+
+async function loadData() {
+  try {
+    const r = await fetch(API + '/dashboard/data');
+    const d = await r.json();
+    allData = d;
+    renderStats(d);
+    renderTypeChart(d.by_type, d.total);
+    renderTable(d.recent, 'recentTable');
+    renderTable(d.recent, 'historyTable');
+    renderLastFailure(d.recent);
+    updateDonut(d.pass_rate);
+  } catch(e) {
+    console.log('Dashboard data load:', e.message);
+  }
+}
+
+async function loadDemoKey() {
+  try {
+    const r = await fetch(API + '/demo-key');
+    const d = await r.json();
+    demoKey = d.demo_api_key;
+    document.getElementById('keyText').textContent = demoKey.substring(0,20) + '...';
+    document.getElementById('demoKeyBox').textContent = demoKey;
+  } catch(e) {
+    document.getElementById('keyText').textContent = 'demo mode';
+  }
+}
+
+function renderStats(d) {
+  document.getElementById('statTotal').textContent = d.total;
+  document.getElementById('statPassed').textContent = d.passed;
+  document.getElementById('statFailed').textContent = d.failed;
+  document.getElementById('statRate').textContent = d.total > 0 ? d.pass_rate + '%' : '—';
+}
+
+function updateDonut(rate) {
+  document.getElementById('donutValue').textContent = rate > 0 ? rate + '%' : '—';
+  document.getElementById('donutBar').setAttribute('width', (rate / 100 * 120).toFixed(1));
+}
+
+function renderTypeChart(byType, total) {
+  const el = document.getElementById('typeChart');
+  if (!total) { el.innerHTML = '<div class="empty-state">No verifications yet</div>'; return; }
+  const colors = { code:'var(--blue)', text:'var(--accent)', script:'#14b8a6', image:'var(--amber)', file:'#9ca3af' };
+  el.innerHTML = Object.entries(byType).map(([type, count]) => `
+    <div class="bar-row">
+      <div class="bar-label">${type}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${(count/total*100).toFixed(0)}%; background:${colors[type]||'var(--accent)'}"></div>
+      </div>
+      <div class="bar-count">${count}</div>
+    </div>
+  `).join('');
+}
+
+function renderTable(rows, targetId) {
+  const el = document.getElementById(targetId);
+  if (!rows || !rows.length) {
+    el.innerHTML = '<div class="empty-state">No verifications yet. Use the Live Demo tab or call POST /verify</div>';
+    return;
+  }
+  el.innerHTML = rows.map(v => {
+    const t = new Date(v.timestamp + 'Z');
+    const time = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const conf = Math.round((v.confidence||0)*100);
+    return `
+      <div class="table-row">
+        <div class="cell mono muted">#${v.id||'—'}</div>
+        <div class="cell"><span class="badge type-${v.task_type}">${v.task_type}</span></div>
+        <div class="cell muted">${(v.intent||'').substring(0,45)}${(v.intent||'').length>45?'…':''}</div>
+        <div class="cell"><span class="badge ${v.verified?'pass':'fail'}">${v.verified?'✓ pass':'✗ fail'}</span></div>
+        <div class="cell">
+          <span class="conf-bar"><span class="conf-fill" style="width:${conf}%"></span></span>
+          <span class="mono muted" style="font-size:10px; margin-left:4px;">${conf}%</span>
+        </div>
+        <div class="cell mono muted">${time}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderLastFailure(rows) {
+  const failed = (rows||[]).find(v => !v.verified);
+  const card = document.getElementById('retryCard');
+  const noFail = document.getElementById('noFailures');
+  if (!failed) {
+    card.classList.remove('visible');
+    noFail.style.display = 'block';
+    return;
+  }
+  noFail.style.display = 'none';
+  document.getElementById('retryIntent').textContent = 'Intent: ' + (failed.intent||'');
+  document.getElementById('retryReason').textContent = '✗ ' + (failed.reason||'');
+  document.getElementById('retryPrompt').textContent = failed.retry_prompt || '(no retry prompt)';
+  card.classList.add('visible');
+}
+
+function showTab(name) {
+  ['overview','history','demo','keys'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+}
+
+async function runDemo() {
+  const type = document.getElementById('demoType').value;
+  const intent = document.getElementById('demoIntent').value.trim();
+  const claim = document.getElementById('demoClaim').value.trim();
+  const output = document.getElementById('demoOutput').value.trim();
+
+  if (!intent || !output) { alert('Please fill in intent and output.'); return; }
+
+  const btn = document.getElementById('verifyBtn');
+  btn.disabled = true; btn.textContent = '⟳ Verifying...';
+
+  const box = document.getElementById('resultBox');
+  box.className = 'result-box';
+
+  try {
+    const body = { task_type: type, intent, ai_claim: claim||'AI completed the task', output };
+    const headers = { 'Content-Type': 'application/json' };
+    if (demoKey) headers['X-API-Key'] = demoKey;
+
+    const r = await fetch(API + '/verify', { method:'POST', headers, body: JSON.stringify(body) });
+    const d = await r.json();
+
+    document.getElementById('resultStatus').textContent = d.verified ? '✓ Verified — AI did what it claimed' : '✗ Failed — AI lied or made an error';
+    document.getElementById('resultStatus').className = 'result-status ' + (d.verified?'pass':'fail');
+    document.getElementById('resultMeta').textContent = `check: ${d.check_type} · confidence: ${Math.round((d.confidence||0)*100)}% · cost: ${d.cost}`;
+
+    const retryEl = document.getElementById('resultRetry');
+    if (!d.verified && d.retry_prompt) {
+      retryEl.textContent = '→ Retry: ' + d.retry_prompt;
+      retryEl.style.display = 'block';
+    } else {
+      retryEl.style.display = 'none';
+    }
+
+    box.classList.add('visible');
+    box.classList.add(d.verified ? 'pass' : 'fail');
+    loadData();
+  } catch(e) {
+    document.getElementById('resultStatus').textContent = '⚠ Error: ' + e.message;
+    document.getElementById('resultStatus').className = 'result-status fail';
+    box.classList.add('visible', 'fail');
+  } finally {
+    btn.disabled = false; btn.textContent = '▷ Run Zerify verification';
+  }
+}
+
+const EXAMPLES = {
+  code_pass: {
+    type:'code', intent:'Write a function that adds two numbers',
+    claim:'I have written the add function',
+    output:'def add(a, b):\n    return a + b\n\nprint(add(2, 3))'
+  },
+  code_fail: {
+    type:'code', intent:'Write a function that multiplies two numbers',
+    claim:'I have written the multiply function',
+    output:'def multiply(a b):\n    return a * b\n\nprint(multiply(3, 4))'
+  },
+  script_fail: {
+    type:'script', intent:'Write a YouTube script about how to start a startup',
+    claim:'I have written the YouTube script',
+    output:'Today we talk about startups. Startups are companies.'
+  }
+};
+
+function prefill(key) {
+  const ex = EXAMPLES[key];
+  document.getElementById('demoType').value = ex.type;
+  document.getElementById('demoIntent').value = ex.intent;
+  document.getElementById('demoClaim').value = ex.claim;
+  document.getElementById('demoOutput').value = ex.output;
+  document.getElementById('resultBox').className = 'result-box';
+  showTab('demo');
+  document.querySelectorAll('.nav-item')[2].classList.add('active');
+}
+
+async function createNewKey() {
+  const name = document.getElementById('newKeyName').value.trim() || 'default';
+  try {
+    const r = await fetch(API + '/keys/new?name=' + encodeURIComponent(name), { method:'POST' });
+    const d = await r.json();
+    document.getElementById('newKeyValue').textContent = d.api_key;
+    document.getElementById('newKeyResult').style.display = 'block';
+  } catch(e) {
+    alert('Error creating key: ' + e.message);
+  }
+}
+
+function copyKey() {
+  if (!demoKey) return;
+  navigator.clipboard.writeText(demoKey).then(() => {
+    document.getElementById('keyText').textContent = 'copied!';
+    setTimeout(() => document.getElementById('keyText').textContent = demoKey.substring(0,20)+'...', 1500);
+  });
+}
+
+// Init
+loadDemoKey();
+loadData();
+autoRefresh = setInterval(loadData, 5000);
+
+// Show overview by default
+showTab('overview');
+document.querySelectorAll('.nav-item')[0].classList.add('active');
+</script>
+</body>
+</html>
