@@ -1,8 +1,8 @@
 // Zerify Content Script
 // Injects "Verify with Zerify" button into ChatGPT, Claude, Gemini
 
-const ZERIFY_API = "http://localhost:8000/verify";
 const ZERIFY_API = "https://zerify-infra.onrender.com/verify";
+const ZERIFY_KEY = "zfy_sk_zerify_demo_permanent_2026";
 
 // ── Detect platform ──────────────────────────────────────────────────────────
 function getPlatform() {
