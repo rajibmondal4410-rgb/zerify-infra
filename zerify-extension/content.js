@@ -1,8 +1,8 @@
 // Zerify Content Script
 // Injects "Verify with Zerify" button into ChatGPT, Claude, Gemini
 
+const ZERIFY_API = "http://localhost:8000/verify";
 const ZERIFY_API = "https://zerify-infra.onrender.com/verify";
-const ZERIFY_KEY = "zfy_sk_zerify_demo_permanent_2026";
 
 // ── Detect platform ──────────────────────────────────────────────────────────
 function getPlatform() {
@@ -217,12 +217,12 @@ function showPanel(panel, result, errorMsg, taskType) {
 
     ${!verified && result.retry_prompt ? `
     <div style="background:#0d1f0d;border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px;margin-top:8px;">
-      <div style="color:#22c55e;font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600">↳ Fix — paste this into ChatGPT</div>
+      <div style="color:#22c55e;font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600">↳ Fix — copy and paste into your AI</div>
       <div style="color:#86efac;font-size:12px;font-family:monospace;line-height:1.7;word-break:break-word">${retryHtml}</div>
       <button onclick="copyRetryPrompt('${encodeURIComponent(result.retry_prompt)}')"
               style="margin-top:10px;background:#166534;color:#bbf7d0;border:1px solid rgba(34,197,94,0.3);
                      border-radius:5px;padding:6px 12px;font-size:11px;cursor:pointer;width:100%;font-weight:600">
-        📋 Copy and paste into AI
+        📋 📋 Copy fix prompt
       </button>
     </div>
     ` : ''}
@@ -242,8 +242,8 @@ window.copyRetryPrompt = function(encoded) {
   navigator.clipboard.writeText(text).then(() => {
     const btns = document.querySelectorAll('#zerify-result-panel button');
     btns.forEach(b => {
-      b.textContent = "✓ Copied — now paste into AI";
-      setTimeout(() => b.textContent = "📋 Copy and paste into AI", 2000);
+      b.textContent = "✓ Copied — paste into AI";
+      setTimeout(() => b.textContent = "📋 📋 Copy fix prompt", 2000);
     });
   });
 };

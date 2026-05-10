@@ -41,6 +41,12 @@ def dashboard():
     with open(path) as f:
         return f.read()
 
+@app.get("/signup", response_class=HTMLResponse)
+def signup():
+    path = os.path.join(static_dir, "signup.html")
+    with open(path) as f:
+        return f.read()
+
 # ─────────────────────────────────────────
 # HEALTH
 # ─────────────────────────────────────────

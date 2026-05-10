@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zerify — Get your API key</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0a; color: #f0f0f0;
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: #111; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 40px;
+    width: 100%; max-width: 440px;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+  .logo-mark {
+    width: 36px; height: 36px; background: #7c3aed;
+    border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; font-size: 18px; font-weight: 700; color: #fff;
+  }
+  .logo-text { font-size: 20px; font-weight: 700; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.02em; }
+  .sub { font-size: 13px; color: #888; margin-bottom: 28px; line-height: 1.5; }
+  .field { margin-bottom: 16px; }
+  .label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.06em; font-family: 'IBM Plex Mono', monospace; margin-bottom: 6px; display: block; }
+  .input {
+    width: 100%; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; padding: 10px 14px; font-size: 13px;
+    color: #f0f0f0; font-family: 'Syne', sans-serif; outline: none;
+    transition: border-color 0.2s;
+  }
+  .input:focus { border-color: #7c3aed; }
+  .btn {
+    width: 100%; background: #7c3aed; color: #fff; border: none;
+    border-radius: 8px; padding: 12px; font-size: 14px;
+    font-weight: 600; cursor: pointer; font-family: 'Syne', sans-serif;
+    transition: opacity 0.2s; margin-top: 8px;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .result {
+    margin-top: 20px; padding: 16px;
+    background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25);
+    border-radius: 10px; display: none;
+  }
+  .result.visible { display: block; }
+  .result-label { font-size: 11px; color: #22c55e; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .key-box {
+    background: #0d1f0d; border: 1px solid rgba(34,197,94,0.2);
+    border-radius: 6px; padding: 10px 12px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    color: #86efac; word-break: break-all; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .key-box:hover { background: #122212; }
+  .copy-hint { font-size: 11px; color: #555; margin-top: 6px; font-family: 'IBM Plex Mono', monospace; }
+  .next-steps { margin-top: 16px; }
+  .next-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.06em; font-family: 'IBM Plex Mono', monospace; margin-bottom: 8px; }
+  .step { font-size: 12px; color: #9ca3af; margin-bottom: 6px; line-height: 1.5; }
+  .step span { color: #7c3aed; }
+  .error { margin-top: 14px; padding: 10px 14px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; font-size: 12px; color: #ef4444; display: none; }
+  .error.visible { display: block; }
+  .divider { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 24px 0; }
+  .features { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .feature { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #888; }
+  .feature-dot { width: 5px; height: 5px; background: #7c3aed; border-radius: 50%; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-mark">Z</div>
+    <div class="logo-text">Zerify</div>
+  </div>
+
+  <h1>Get your free API key</h1>
+  <p class="sub">Add AI verification to your app in 3 lines of code. Free to start.</p>
+
+  <div class="features">
+    <div class="feature"><div class="feature-dot"></div>Verify AI outputs in real-time</div>
+    <div class="feature"><div class="feature-dot"></div>Auto-generates retry prompts on failure</div>
+    <div class="feature"><div class="feature-dot"></div>Works with ChatGPT, Claude, Gemini, any LLM</div>
+    <div class="feature"><div class="feature-dot"></div>Free tier — 1000 verifications/month</div>
+  </div>
+
+  <div class="field">
+    <label class="label">Your name</label>
+    <input class="input" id="nameInput" type="text" placeholder="Rajib Mondal" />
+  </div>
+  <div class="field">
+    <label class="label">Email address</label>
+    <input class="input" id="emailInput" type="email" placeholder="you@company.com" />
+  </div>
+  <div class="field">
+    <label class="label">What are you building? (optional)</label>
+    <input class="input" id="appInput" type="text" placeholder="AI email agent, medical app, code assistant..." />
+  </div>
+
+  <button class="btn" id="getKeyBtn" onclick="getKey()">Get my API key →</button>
+
+  <div class="error" id="errorBox"></div>
+
+  <div class="result" id="resultBox">
+    <div class="result-label">✓ Your API key is ready</div>
+    <div class="key-box" id="keyDisplay" onclick="copyKey()">loading...</div>
+    <div class="copy-hint">Click to copy</div>
+
+    <div class="next-steps">
+      <div class="next-label">Add to your app</div>
+      <div class="step"><span>1.</span> Add header: <span>X-API-Key: YOUR_KEY</span></div>
+      <div class="step"><span>2.</span> POST to: <span>https://zerify-infra.onrender.com/verify</span></div>
+      <div class="step"><span>3.</span> See results in your <a href="/dashboard" style="color:#7c3aed">dashboard →</a></div>
+    </div>
+  </div>
+
+  <hr class="divider">
+  <div style="text-align:center; font-size:11px; color:#444; font-family:'IBM Plex Mono',monospace;">
+    Already have a key? <a href="/dashboard" style="color:#7c3aed">View dashboard →</a>
+  </div>
+</div>
+
+<script>
+let generatedKey = '';
+
+async function getKey() {
+  const name = document.getElementById('nameInput').value.trim();
+  const email = document.getElementById('emailInput').value.trim();
+  const app = document.getElementById('appInput').value.trim();
+
+  const errBox = document.getElementById('errorBox');
+  errBox.className = 'error';
+
+  if (!name) { errBox.textContent = 'Please enter your name.'; errBox.className = 'error visible'; return; }
+  if (!email || !email.includes('@')) { errBox.textContent = 'Please enter a valid email.'; errBox.className = 'error visible'; return; }
+
+  const btn = document.getElementById('getKeyBtn');
+  btn.disabled = true; btn.textContent = 'Generating...';
+
+  try {
+    const keyName = `${name.toLowerCase().replace(/\s+/g,'-')}-${email.split('@')[0]}`;
+    const r = await fetch(`/keys/new?name=${encodeURIComponent(keyName)}`, { method: 'POST' });
+    const d = await r.json();
+    generatedKey = d.api_key;
+    document.getElementById('keyDisplay').textContent = generatedKey;
+    document.getElementById('resultBox').className = 'result visible';
+    btn.textContent = '✓ Key generated';
+  } catch(e) {
+    errBox.textContent = 'Error generating key. Please try again.';
+    errBox.className = 'error visible';
+    btn.disabled = false;
+    btn.textContent = 'Get my API key →';
+  }
+}
+
+function copyKey() {
+  if (!generatedKey) return;
+  navigator.clipboard.writeText(generatedKey).then(() => {
+    document.getElementById('keyDisplay').textContent = '✓ Copied to clipboard!';
+    setTimeout(() => document.getElementById('keyDisplay').textContent = generatedKey, 1500);
+  });
+}
+
+document.getElementById('emailInput').addEventListener('keypress', e => {
+  if (e.key === 'Enter') getKey();
+});
+</script>
+</body>
+</html>
