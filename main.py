@@ -219,8 +219,8 @@ def _run_verification(req: VerifyRequest) -> dict:
             "cost": "$0.005"
         }
 
-    # ── TEXT ──
-    elif req.task_type == "text":
+    # ── TEXT / MEDICAL / LEGAL ── (medical+legal use text pipeline with smart judge)
+    elif req.task_type in ["text", "medical", "legal"]:
         basic = basic_text_check(req.intent, req.output)
 
         if not basic["passed"]:
