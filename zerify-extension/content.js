@@ -198,6 +198,41 @@ function showPanel(panel, result, errorMsg, taskType) {
   // Format line breaks
   retryHtml = retryHtml.replace(/\n/g, '<br>');
 
+  let issuesSection = '';
+  
+  // FIX: Only show "What's wrong" and the Retry box if it actually failed.
+  if (!verified) {
+    issuesSection = `
+      <div style="margin-bottom:10px;">
+        <div style="color:#9ca3af;font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em">What's wrong</div>
+        <div style="color:#e5e7eb;font-size:12px;line-height:1.6;background:#1a1a1a;padding:8px;border-radius:6px;border-left:3px solid ${statusColor}">
+          ${result.reason || 'No reason provided'}
+        </div>
+      </div>
+
+      ${result.retry_prompt ? `
+      <div style="background:#0d1f0d;border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px;margin-top:8px;">
+        <div style="color:#22c55e;font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600">↳ Fix — copy and paste into your AI</div>
+        <div style="color:#86efac;font-size:12px;font-family:monospace;line-height:1.7;word-break:break-word">${retryHtml}</div>
+        <button onclick="zerifyCopy('${encodeURIComponent(result.retry_prompt)}')"
+                style="margin-top:10px;background:#166534;color:#bbf7d0;border:1px solid rgba(34,197,94,0.3);
+                       border-radius:5px;padding:6px 12px;font-size:11px;cursor:pointer;width:100%;font-weight:600">
+          📋 Copy fix prompt
+        </button>
+      </div>
+      ` : ''}
+    `;
+  } else {
+    issuesSection = `
+      <div style="margin-bottom:10px;">
+        <div style="color:#9ca3af;font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em">Verification Notes</div>
+        <div style="color:#e5e7eb;font-size:12px;line-height:1.6;background:#1a1a1a;padding:8px;border-radius:6px;border-left:3px solid ${statusColor}">
+          ${result.reason || 'Everything looks correct.'}
+        </div>
+      </div>
+    `;
+  }
+
   panel.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
       <div style="display:flex;align-items:center;gap:8px;">
@@ -220,29 +255,12 @@ function showPanel(panel, result, errorMsg, taskType) {
       </div>
     </div>
 
-    <div style="margin-bottom:10px;">
-      <div style="color:#9ca3af;font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em">What's wrong</div>
-      <div style="color:#e5e7eb;font-size:12px;line-height:1.6;background:#1a1a1a;padding:8px;border-radius:6px;border-left:3px solid ${statusColor}">
-        ${result.reason || 'No reason provided'}
-      </div>
-    </div>
-
-    ${!verified && result.retry_prompt ? `
-    <div style="background:#0d1f0d;border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px;margin-top:8px;">
-      <div style="color:#22c55e;font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600">↳ Fix — copy and paste into your AI</div>
-      <div style="color:#86efac;font-size:12px;font-family:monospace;line-height:1.7;word-break:break-word">${retryHtml}</div>
-      <button onclick="zerifyCopy('${encodeURIComponent(result.retry_prompt)}')"
-              style="margin-top:10px;background:#166534;color:#bbf7d0;border:1px solid rgba(34,197,94,0.3);
-                     border-radius:5px;padding:6px 12px;font-size:11px;cursor:pointer;width:100%;font-weight:600">
-        📋 Copy fix prompt
-      </button>
-    </div>
-    ` : ''}
+    ${issuesSection}
 
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid #222;
                 display:flex;justify-content:space-between;align-items:center">
       <div style="color:#444;font-size:10px;font-family:monospace">id: ${result.id || '—'}</div>
-      <a href="https://zerify-infra.onrender.com/dashboard" target="_blank"
+      <a href="[https://zerify-infra.onrender.com/dashboard](https://zerify-infra.onrender.com/dashboard)" target="_blank"
          style="color:#7c3aed;font-size:11px;text-decoration:none">View dashboard →</a>
     </div>
   `;
