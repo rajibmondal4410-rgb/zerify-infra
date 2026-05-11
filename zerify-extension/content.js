@@ -150,7 +150,7 @@ async function runVerification() {
     const result = await response.json();
     showPanel(panel, result, null, taskType);
   } catch (err) {
-    showPanel(panel, null, `Cannot connect to Zerify API. Make sure server is running on localhost:8000`);
+    showPanel(panel, null, `Cannot connect to Zerify API. Make sure Zerify server is running.`);
   } finally {
     btn.innerHTML = `<span style="margin-right:5px">⚡</span>Verify with Zerify`;
     btn.style.background = "#7c3aed";
@@ -222,7 +222,7 @@ function showPanel(panel, result, errorMsg, taskType) {
       <button onclick="copyRetryPrompt('${encodeURIComponent(result.retry_prompt)}')"
               style="margin-top:10px;background:#166534;color:#bbf7d0;border:1px solid rgba(34,197,94,0.3);
                      border-radius:5px;padding:6px 12px;font-size:11px;cursor:pointer;width:100%;font-weight:600">
-        📋 📋 Copy fix prompt
+        📋 Copy fix prompt
       </button>
     </div>
     ` : ''}
@@ -230,7 +230,7 @@ function showPanel(panel, result, errorMsg, taskType) {
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid #222;
                 display:flex;justify-content:space-between;align-items:center">
       <div style="color:#444;font-size:10px;font-family:monospace">id: ${result.id || '—'}</div>
-      <a href="http://localhost:8000/dashboard" target="_blank"
+      <a href="https://zerify-infra.onrender.com/dashboard" target="_blank"
          style="color:#7c3aed;font-size:11px;text-decoration:none">View dashboard →</a>
     </div>
   `;
@@ -243,7 +243,7 @@ window.copyRetryPrompt = function(encoded) {
     const btns = document.querySelectorAll('#zerify-result-panel button');
     btns.forEach(b => {
       b.textContent = "✓ Copied — paste into AI";
-      setTimeout(() => b.textContent = "📋 📋 Copy fix prompt", 2000);
+      setTimeout(() => b.textContent = "📋 Copy fix prompt", 2000);
     });
   });
 };
