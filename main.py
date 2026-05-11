@@ -163,16 +163,24 @@ def _run_verification(req: VerifyRequest) -> dict:
     if req.task_type == "code":
         code_result = run_code_check(req.output, req.language)
 
-        if not code_result["passed"]:
-            error = code_result.get("error", "Unknown error")
-            return {
-                "verified": False,
-                "check_type": "code_execution",
-                "confidence": 1.0,
-                "reason": f"Code failed: {error}",
-                "retry_prompt": f"Your code has this error: {error}. Fix ONLY this error. Do not rewrite the whole function.",
-                "cost": "$0.0001"
-            }
+        judge_input = req.output
+        # If it failed, pass the exact error to the AI Judge so it can explain how to fix it
+        exec_result = code_result.get("output", "") if code_result["passed"] else code_result.get("error", "Execution failed")
+
+        # ALWAYS run the AI judge to get the precise fix and retry prompt
+        ai_result = run_ai_judge(req.intent, req.ai_claim, judge_input, task_type="code", exec_result=exec_result)
+
+        # It is only verified if BOTH the code runs AND the AI judge approves
+        is_verified = code_result["passed"] and ai_result["verified"]
+
+        return {
+            "verified": is_verified,
+            "check_type": "code_execution + ai_judge",
+            "confidence": ai_result["confidence"],
+            "reason": ai_result["reason"],
+            "retry_prompt": ai_result["retry_prompt"],
+            "cost": "$0.005"
+        }
 
         judge_input = req.output
         exec_result = code_result.get("output", "")

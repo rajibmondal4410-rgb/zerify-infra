@@ -260,8 +260,8 @@ function showPanel(panel, result, errorMsg, taskType) {
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid #222;
                 display:flex;justify-content:space-between;align-items:center">
       <div style="color:#444;font-size:10px;font-family:monospace">id: ${result.id || '—'}</div>
-      <a href="[https://zerify-infra.onrender.com/dashboard](https://zerify-infra.onrender.com/dashboard)" target="_blank"
-         style="color:#7c3aed;font-size:11px;text-decoration:none">View dashboard →</a>
+      <span onclick="window.open('https://zerify-infra.onrender.com/dashboard', '_blank')"
+         style="color:#7c3aed;font-size:11px;text-decoration:none;cursor:pointer;">View dashboard →</span>
     </div>
   `;
 }
