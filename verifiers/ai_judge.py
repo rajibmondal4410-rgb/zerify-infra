@@ -1,31 +1,71 @@
 import os
 import json
+import random
 from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
+# ── Load all Groq keys ────────────────────────────────────────────────────────
+GROQ_KEYS = []
+for i in range(1, 6):
+    key = os.environ.get(f"GROQ_API_KEY_{i}") or (os.environ.get("GROQ_API_KEY") if i == 1 else None)
+    if key:
+        GROQ_KEYS.append(key)
+
+# ── Load all Gemini keys ──────────────────────────────────────────────────────
+GEMINI_KEYS = []
+for i in range(1, 6):
+    key = os.environ.get(f"GEMINI_API_KEY_{i}")
+    if key:
+        GEMINI_KEYS.append(key)
+
+# Fallback: single key env vars
+if not GROQ_KEYS and os.environ.get("GROQ_API_KEY"):
+    GROQ_KEYS.append(os.environ.get("GROQ_API_KEY"))
+if not GEMINI_KEYS and os.environ.get("GEMINI_API_KEY"):
+    GEMINI_KEYS.append(os.environ.get("GEMINI_API_KEY"))
+
+# ── Build Groq clients pool ───────────────────────────────────────────────────
+GROQ_CLIENTS = [Groq(api_key=k) for k in GROQ_KEYS]
+
+# ── Build Gemini model pool ───────────────────────────────────────────────────
+GEMINI_MODELS = []
+if GEMINI_KEYS:
+    try:
+        import google.generativeai as genai
+        for key in GEMINI_KEYS:
+            genai.configure(api_key=key)
+            GEMINI_MODELS.append(genai.GenerativeModel('gemini-1.5-flash'))
+    except ImportError:
+        pass
+
+print(f"[Zerify] Loaded {len(GROQ_CLIENTS)} Groq keys, {len(GEMINI_MODELS)} Gemini keys")
+
+# ── JUDGE PROMPTS ─────────────────────────────────────────────────────────────
 JUDGE_PROMPTS = {
-    "code": """You are a strict code verification judge.
+    "code": """You are a strict code verification judge. Be precise and binary.
 
 ORIGINAL INTENT: {intent}
 CODE SUBMITTED:
 {output}
 EXECUTION RESULT: {exec_result}
 
-Evaluate:
-- Does the code run without errors?
-- Does it correctly solve the intent?
-- Are there syntax errors or logic errors?
+Evaluate EXACTLY:
+1. Does the code run without errors?
+2. Does it correctly solve the intent?
+3. Are there syntax errors, logic errors, wrong variable names, missing returns?
 
-Respond ONLY in valid JSON:
+You MUST identify the EXACT line number and character that is wrong.
+Give confidence as TRUE certainty — 1.0 only if 100% certain.
+
+Respond ONLY in valid JSON — no other text:
 {{
   "verified": true or false,
-  "confidence": 0.0 to 1.0,
-  "reason": "Exact issue: line X has Y problem",
-  "fix": "Here is the corrected code: [paste exact corrected code]",
-  "retry_prompt": "Fix this exact error in the code: [describe exact fix needed with line reference]"
+  "confidence": 0.0-1.0,
+  "reason": "Line X: exact problem description",
+  "fix": "Exact corrected code or exact change needed at line X",
+  "retry_prompt": "Your code has a bug at line X: [exact error]. Fix it by changing [exact old code] to [exact new code]. Do not rewrite the entire function."
 }}""",
 
     "text": """You are a strict content verification judge.
@@ -34,17 +74,20 @@ ORIGINAL INTENT: {intent}
 ACTUAL OUTPUT:
 {output}
 
-Evaluate:
-- Does the output FULLY answer what was asked?
-- Is anything missing or wrong?
+Evaluate EXACTLY:
+1. Does the output FULLY and COMPLETELY answer what was asked?
+2. List every specific thing that is missing or wrong
+3. Is the length appropriate for the question?
 
-Respond ONLY in valid JSON:
+Give confidence as TRUE certainty — not a default number.
+
+Respond ONLY in valid JSON — no other text:
 {{
   "verified": true or false,
-  "confidence": 0.0 to 1.0,
-  "reason": "Specific: missing X, Y, Z",
-  "fix": "The correct complete answer should include: [list exactly what is missing]",
-  "retry_prompt": "Rewrite your answer. You must include: 1) [specific thing] 2) [specific thing] 3) [specific thing]. Do not skip any of these."
+  "confidence": 0.0-1.0,
+  "reason": "Specific: missing [X], [Y], [Z]",
+  "fix": "The complete answer must include: [exact list of missing content]",
+  "retry_prompt": "Rewrite your answer. You MUST include all of these: 1) [specific missing thing] 2) [specific missing thing] 3) [specific missing thing]. Do not skip any."
 }}""",
 
     "script": """You are a YouTube/content script verification judge.
@@ -53,38 +96,47 @@ ORIGINAL INTENT: {intent}
 SCRIPT:
 {output}
 
-Rules:
-- If script has hook + body + over 200 words = verified true
-- Only fail if under 100 words, off-topic, or no structure
-- Never fail for missing legal disclaimers
+Rules — verify=true if ALL of these pass:
+1. Script has an opening hook (first 2-3 sentences grab attention)
+2. Script body covers the topic with specific details
+3. Script is over 200 words
+4. Script matches the topic requested
 
-Respond ONLY in valid JSON:
+Rules — verify=false ONLY if:
+- Under 100 words
+- Completely off-topic
+- No structure at all
+- Do NOT fail for missing legal disclaimers
+
+Respond ONLY in valid JSON — no other text:
 {{
   "verified": true or false,
-  "confidence": 0.0 to 1.0,
-  "reason": "Specific script issue",
-  "fix": "The script needs: [exact improvements]",
-  "retry_prompt": "Rewrite the script with: 1) A stronger hook in first 30 seconds 2) At least 400 words 3) Clear CTA at the end saying [specific CTA]"
+  "confidence": 0.0-1.0,
+  "reason": "Specific: [exact issue with script]",
+  "fix": "The script needs: [exact specific improvements]",
+  "retry_prompt": "Rewrite the script. It must have: 1) A strong hook in the first 30 seconds that [specific hook suggestion] 2) At least 400 words covering [specific topics needed] 3) A clear CTA at the end"
 }}""",
 
-    "medical": """You are a strict medical content verification judge.
+    "medical": """You are a strict medical content safety verification judge.
 
 ORIGINAL INTENT: {intent}
 MEDICAL OUTPUT:
 {output}
 
-Check:
-- Is medical information complete and safe?
-- Are dosages, warnings, or critical info missing?
-- Does it recommend consulting a doctor?
+Check ALL of these — mark FAILED if any critical item is missing:
+1. Weight-based or age-based dosing (if applicable)
+2. Frequency and maximum daily dose
+3. Contraindications (when NOT to use)
+4. Warning signs that require immediate medical attention
+5. Recommendation to consult a doctor before use
 
-Respond ONLY in valid JSON:
+Respond ONLY in valid JSON — no other text:
 {{
   "verified": true or false,
-  "confidence": 0.0 to 1.0,
-  "reason": "Specific medical issue: missing X warning",
-  "fix": "The safe and complete answer must include: [exact missing medical info]",
-  "retry_prompt": "Rewrite with: 1) weight-based dosing if applicable 2) age-specific warnings 3) contraindications 4) explicitly recommend consulting a doctor before use"
+  "confidence": 0.0-1.0,
+  "reason": "Missing: [exact list of what is absent from the medical response]",
+  "fix": "The safe medical answer must also include: [exact missing safety information]",
+  "retry_prompt": "Rewrite the medical answer. You MUST include: 1) Exact dosage with weight/age calculation 2) Maximum doses per day and minimum hours between doses 3) Specific contraindications 4) Warning signs to stop and seek emergency care 5) Explicitly say: consult your doctor or pharmacist before giving this medication"
 }}""",
 
     "legal": """You are a strict legal content verification judge.
@@ -93,18 +145,19 @@ ORIGINAL INTENT: {intent}
 LEGAL OUTPUT:
 {output}
 
-Check:
-- Is legal information accurate?
-- Are jurisdiction caveats missing?
-- Does it recommend consulting a lawyer?
+Check ALL of these — mark FAILED if missing:
+1. Jurisdiction-specific applicability stated
+2. Key exceptions or edge cases mentioned
+3. Recommendation to consult a qualified lawyer
+4. Any dangerous oversimplifications corrected
 
-Respond ONLY in valid JSON:
+Respond ONLY in valid JSON — no other text:
 {{
   "verified": true or false,
-  "confidence": 0.0 to 1.0,
-  "reason": "Specific legal issue: missing X caveat",
-  "fix": "The complete legal answer must include: [exact missing legal points]",
-  "retry_prompt": "Rewrite including: 1) jurisdiction-specific caveats 2) exceptions to the rule 3) recommend consulting a qualified lawyer for this specific situation"
+  "confidence": 0.0-1.0,
+  "reason": "Missing: [exact legal gaps in the response]",
+  "fix": "The complete legal answer must also include: [exact missing legal caveats]",
+  "retry_prompt": "Rewrite the legal answer. You MUST include: 1) Which jurisdiction this applies to and where it may differ 2) Key exceptions to this rule 3) Potential consequences of getting this wrong 4) Explicitly recommend: consult a qualified lawyer for your specific situation"
 }}""",
 
     "image": """You are verifying AI-generated images against the user's request.
@@ -112,54 +165,57 @@ Respond ONLY in valid JSON:
 ORIGINAL INTENT: {intent}
 VERIFICATION NOTES: {output}
 
-Respond ONLY in valid JSON:
+Respond ONLY in valid JSON — no other text:
 {{
   "verified": true or false,
-  "confidence": 0.0 to 1.0,
+  "confidence": 0.0-1.0,
   "reason": "Specific image issue",
   "fix": "Images need: [exact fix]",
-  "retry_prompt": "Regenerate the images with: [specific corrections needed]"
+  "retry_prompt": "Regenerate the images. Make sure: 1) Each image is visually unique 2) Images match this description: [intent] 3) Use a different random seed for each image"
 }}"""
 }
 
 
-def run_ai_judge(intent: str, ai_claim: str, output: str, task_type: str = "text", exec_result: str = "") -> dict:
-    intent_lower = intent.lower()
+def _get_provider():
+    """Smart load balancer — picks the least-loaded available provider."""
+    has_groq = len(GROQ_CLIENTS) > 0
+    has_gemini = len(GEMINI_MODELS) > 0
 
-    if task_type == "text":
-        script_signals = ["youtube script", "blog post", "video script",
-                          "script about", "write a script", "5 minute script",
-                          "minute youtube", "write me a script"]
-        if any(w in intent_lower for w in script_signals):
-            task_type = "script"
+    if has_groq and has_gemini:
+        # 50/50 split between Groq and Gemini
+        if random.random() < 0.5:
+            return "groq", random.choice(GROQ_CLIENTS)
         else:
-            medical_words = ["doctor", "patient", "diagnosis", "symptom", "medicine",
-                             "drug", "dose", "treatment", "disease", "medical",
-                             "hospital", "prescription", "surgery", "dosage"]
-            legal_words = ["law", "legal", "lawyer", "court", "contract",
-                           "lawsuit", "attorney", "jurisdiction", "statute", "liability"]
-            if any(w in intent_lower for w in medical_words):
-                task_type = "medical"
-            elif any(w in intent_lower for w in legal_words):
-                task_type = "legal"
+            return "gemini", random.choice(GEMINI_MODELS)
+    elif has_groq:
+        return "groq", random.choice(GROQ_CLIENTS)
+    elif has_gemini:
+        return "gemini", random.choice(GEMINI_MODELS)
+    else:
+        raise Exception("No AI provider available. Check API keys.")
 
-    template = JUDGE_PROMPTS.get(task_type, JUDGE_PROMPTS["text"])
-    prompt = template.format(
-        intent=intent,
-        ai_claim=ai_claim,
-        output=output[:3000],
-        exec_result=exec_result
-    )
 
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.0,
-        max_tokens=600
-    )
+def _call_provider(provider_type, provider, prompt):
+    """Call the selected provider and return raw text."""
+    if provider_type == "groq":
+        response = provider.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+            max_tokens=600
+        )
+        return response.choices[0].message.content.strip()
+    else:
+        import google.generativeai as genai
+        response = provider.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(temperature=0.0, max_output_tokens=600)
+        )
+        return response.text.strip()
 
-    raw = response.choices[0].message.content.strip()
 
+def _parse_json(raw):
+    """Extract and parse JSON from model response."""
     if "```" in raw:
         parts = raw.split("```")
         for part in parts:
@@ -175,11 +231,68 @@ def run_ai_judge(intent: str, ai_claim: str, output: str, task_type: str = "text
     if start != -1 and end > start:
         raw = raw[start:end]
 
+    return json.loads(raw)
+
+
+def run_ai_judge(intent: str, ai_claim: str, output: str, task_type: str = "text", exec_result: str = "") -> dict:
+    intent_lower = intent.lower()
+
+    # Auto-detect task type
+    if task_type == "text":
+        script_signals = ["youtube script", "yt script", "video script", "write a script",
+                          "write me a script", "5 minute script", "minute youtube",
+                          "blog post", "linkedin post", "tiktok script"]
+        medical_words = ["doctor", "patient", "diagnosis", "symptom", "medicine",
+                         "drug", "dose", "dosage", "treatment", "disease", "medical",
+                         "hospital", "prescription", "surgery", "paracetamol",
+                         "ibuprofen", "antibiotic", "medication"]
+        legal_words = ["law", "legal", "lawyer", "court", "contract",
+                       "lawsuit", "attorney", "jurisdiction", "statute", "liability", "sue"]
+
+        if any(w in intent_lower for w in script_signals):
+            task_type = "script"
+        elif any(w in intent_lower for w in medical_words):
+            task_type = "medical"
+        elif any(w in intent_lower for w in legal_words):
+            task_type = "legal"
+
+    template = JUDGE_PROMPTS.get(task_type, JUDGE_PROMPTS["text"])
+    prompt = template.format(
+        intent=intent,
+        ai_claim=ai_claim,
+        output=output[:3000],
+        exec_result=exec_result
+    )
+
+    # Try primary provider, fallback to the other if it fails
+    provider_type, provider = _get_provider()
+    
     try:
-        result = json.loads(raw)
+        raw = _call_provider(provider_type, provider, prompt)
+    except Exception as e:
+        # Fallback to other provider
+        print(f"[Zerify] {provider_type} failed ({e}), trying fallback")
+        try:
+            fallback_type = "gemini" if provider_type == "groq" else "groq"
+            if fallback_type == "groq" and GROQ_CLIENTS:
+                raw = _call_provider("groq", random.choice(GROQ_CLIENTS), prompt)
+            elif fallback_type == "gemini" and GEMINI_MODELS:
+                raw = _call_provider("gemini", random.choice(GEMINI_MODELS), prompt)
+            else:
+                raise Exception("All providers failed")
+        except Exception as e2:
+            return {
+                "verified": False,
+                "confidence": 0.5,
+                "reason": "Verification service temporarily unavailable",
+                "retry_prompt": f"Please redo this task carefully: {intent}"
+            }
+
+    try:
+        result = _parse_json(raw)
         fix = str(result.get("fix", ""))
         retry = str(result.get("retry_prompt", ""))
-        # Combine fix + retry into one powerful prompt
+
         combined_retry = ""
         if fix and retry:
             combined_retry = f"{fix}\n\n{retry}"

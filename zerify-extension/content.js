@@ -77,7 +77,6 @@ function detectTaskType(intent, response) {
   if (legalIntent.some(w => i.includes(w))) return "legal";
 
   // Code — only if response has actual code patterns (not just punctuation)
-  // Must have real code keywords, not just special characters
   const codePatterns = [
     /def [a-z_]+\(/,           // Python function
     /function [a-z_]+\(/,      // JS function
@@ -143,8 +142,6 @@ async function runVerification() {
   btn.disabled = true;
 
   const taskType = detectTaskType(userPrompt, aiResponse);
-
-  // Map medical/legal to "text" for the API since backend handles it via ai_judge
   const apiTaskType = (taskType === "medical" || taskType === "legal") ? "text" : taskType;
 
   try {
@@ -178,10 +175,12 @@ function showPanel(panel, result, errorMsg, taskType) {
     panel.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="font-weight:700;font-size:14px;color:#f59e0b">⚠ Zerify</div>
-        <div onclick="document.getElementById('zerify-result-panel').style.display='none'"
-             style="cursor:pointer;color:#666;font-size:18px">×</div>
+        <div id="zerify-close-err" style="cursor:pointer;color:#666;font-size:18px">×</div>
       </div>
       <div style="color:#9ca3af;font-size:12px;line-height:1.5">${errorMsg}</div>`;
+      
+    // Secure listener
+    document.getElementById('zerify-close-err').addEventListener('click', () => panel.style.display = 'none');
     return;
   }
 
@@ -192,15 +191,14 @@ function showPanel(panel, result, errorMsg, taskType) {
   const conf = Math.round((result.confidence || 0) * 100);
   const displayType = taskType || result.task_type || "text";
 
+  // Store globally for copy button
+  window._zerifyRetryPrompt = result.retry_prompt || '';
+  
   let retryHtml = (result.retry_prompt || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  // Format numbered lists
   retryHtml = retryHtml.replace(/(\d+[\)\.] )/g, '<br><span style="color:#f59e0b;font-weight:600">$1</span>');
-  // Format line breaks
   retryHtml = retryHtml.replace(/\n/g, '<br>');
 
   let issuesSection = '';
-  
-  // FIX: Only show "What's wrong" and the Retry box if it actually failed.
   if (!verified) {
     issuesSection = `
       <div style="margin-bottom:10px;">
@@ -214,7 +212,7 @@ function showPanel(panel, result, errorMsg, taskType) {
       <div style="background:#0d1f0d;border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px;margin-top:8px;">
         <div style="color:#22c55e;font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600">↳ Fix — copy and paste into your AI</div>
         <div style="color:#86efac;font-size:12px;font-family:monospace;line-height:1.7;word-break:break-word">${retryHtml}</div>
-        <button onclick="zerifyCopy('${encodeURIComponent(result.retry_prompt)}')"
+        <button id="zerify-copy-btn"
                 style="margin-top:10px;background:#166534;color:#bbf7d0;border:1px solid rgba(34,197,94,0.3);
                        border-radius:5px;padding:6px 12px;font-size:11px;cursor:pointer;width:100%;font-weight:600">
           📋 Copy fix prompt
@@ -240,8 +238,7 @@ function showPanel(panel, result, errorMsg, taskType) {
         <div style="font-weight:700;font-size:14px">Zerify</div>
         <div style="background:#1f1f2e;color:#7c3aed;font-size:10px;padding:2px 6px;border-radius:4px;font-family:monospace">${displayType}</div>
       </div>
-      <div onclick="document.getElementById('zerify-result-panel').style.display='none'"
-           style="cursor:pointer;color:#555;font-size:20px;padding:0 4px">×</div>
+      <div id="zerify-close-main" style="cursor:pointer;color:#555;font-size:20px;padding:0 4px">×</div>
     </div>
 
     <div style="background:${verified ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'};
@@ -251,7 +248,7 @@ function showPanel(panel, result, errorMsg, taskType) {
         ${statusIcon} ${statusText}
       </div>
       <div style="color:#9ca3af;font-size:11px;font-family:monospace">
-        confidence: ${conf}% · ${result.check_type || displayType} · ${result.cost || '$0.005'}
+        confidence: ${conf}% · ${result.check_type || displayType}
       </div>
     </div>
 
@@ -260,20 +257,61 @@ function showPanel(panel, result, errorMsg, taskType) {
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid #222;
                 display:flex;justify-content:space-between;align-items:center">
       <div style="color:#444;font-size:10px;font-family:monospace">id: ${result.id || '—'}</div>
+      <span id="zerify-dash-link" style="color:#7c3aed;font-size:11px;text-decoration:none;cursor:pointer;">View dashboard →</span>
     </div>
   `;
+
+  // ── Secure Event Listeners (Bypasses ChatGPT Security Blocks) ──
+  
+  // Close Button
+  document.getElementById('zerify-close-main').addEventListener('click', () => {
+    panel.style.display = 'none';
+  });
+
+  // Dashboard Link
+  document.getElementById('zerify-dash-link').addEventListener('click', () => {
+    window.open('[https://zerify-infra.onrender.com/dashboard](https://zerify-infra.onrender.com/dashboard)', '_blank');
+  });
+
+  // Copy Button
+  const copyBtn = document.getElementById('zerify-copy-btn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const text = window._zerifyRetryPrompt;
+      if (!text) return;
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.textContent = "✓ Copied!";
+          copyBtn.style.background = "#14532d";
+          setTimeout(() => {
+            copyBtn.textContent = "📋 Copy fix prompt";
+            copyBtn.style.background = "#166534";
+          }, 2000);
+        }).catch(() => zerifyFallbackCopy(text));
+      } else {
+        zerifyFallbackCopy(text);
+      }
+    });
+  }
 }
 
-window.zerifyCopy = function(encoded) {
-  const text = decodeURIComponent(encoded);
-  navigator.clipboard.writeText(text).then(() => {
-    const btns = document.querySelectorAll('#zerify-result-panel button');
-    btns.forEach(b => {
-      b.textContent = "✓ Copied — paste into your AI";
-      setTimeout(() => b.textContent = "📋 Copy fix prompt", 2000);
-    });
-  });
-};
+// Global fallback function for older browsers
+function zerifyFallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  const btn = document.getElementById('zerify-copy-btn');
+  if (btn) {
+    btn.textContent = "✓ Copied!";
+    setTimeout(() => { btn.textContent = "📋 Copy fix prompt"; }, 2000);
+  }
+}
 
 function injectZerify() {
   if (document.getElementById("zerify-verify-btn")) return;

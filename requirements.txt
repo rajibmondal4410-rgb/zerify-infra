@@ -1,8 +1,10 @@
 fastapi
-uvicorn
+uvicorn[standard]
 groq
+google-generativeai
 python-dotenv
 pydantic
 pillow
 imagehash
 requests
+python-multipart
