@@ -42,9 +42,12 @@ function getLastUserPrompt() {
 
   if (!elements || elements.length === 0) return "Verify this AI response";
 
-  // Grab the last 3 user messages to give the AI Judge full conversation context
-  const lastThree = Array.from(elements).slice(-3).map(el => el.innerText.trim());
-  return lastThree.join("\n\n---\n\n").substring(0, 1500);
+  // Give context, but force the AI to focus ONLY on the latest request
+  const arr = Array.from(elements).map(el => el.innerText.trim());
+  const latest = arr[arr.length - 1];
+  const previous = arr.slice(Math.max(0, arr.length - 3), -1).join(" | ");
+  
+  return `PAST CONTEXT: ${previous}\n\nACTUAL TASK TO VERIFY RIGHT NOW: ${latest}`.substring(0, 1500);
 }
 
 // ── Smarter task type detection ──────────────────────────────────────────────
@@ -237,7 +240,6 @@ function showPanel(panel, result, errorMsg, taskType) {
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid #222;
                 display:flex;justify-content:space-between;align-items:center">
       <div style="color:#444;font-size:10px;font-family:monospace">id: ${result.id || '—'}</div>
-      <span id="zerify-dash-link" style="color:#7c3aed;font-size:11px;text-decoration:none;cursor:pointer;">View dashboard →</span>
     </div>
   `;
 
