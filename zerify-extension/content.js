@@ -32,24 +32,19 @@ function getLastAIResponse() {
   return null;
 }
 
+// ── FEATURE: Capture Last 3 Conversation Steps ──────────────────────────────
 function getLastUserPrompt() {
   const platform = getPlatform();
-  if (platform === "chatgpt") {
-    const msgs = document.querySelectorAll('[data-message-author-role="user"]');
-    if (msgs.length === 0) return "Verify this AI response";
-    return msgs[msgs.length - 1].innerText.trim().substring(0, 300);
-  }
-  if (platform === "claude") {
-    const msgs = document.querySelectorAll('[data-testid="user-message"]');
-    if (msgs.length === 0) return "Verify this AI response";
-    return msgs[msgs.length - 1].innerText.trim().substring(0, 300);
-  }
-  if (platform === "gemini") {
-    const msgs = document.querySelectorAll('.query-text, .user-query');
-    if (msgs.length === 0) return "Verify this AI response";
-    return msgs[msgs.length - 1].innerText.trim().substring(0, 300);
-  }
-  return "Verify this AI response";
+  let elements = [];
+  if (platform === "chatgpt") elements = document.querySelectorAll('[data-message-author-role="user"]');
+  else if (platform === "claude") elements = document.querySelectorAll('[data-testid="user-message"]');
+  else if (platform === "gemini") elements = document.querySelectorAll('.query-text, .user-query');
+
+  if (!elements || elements.length === 0) return "Verify this AI response";
+
+  // Grab the last 3 user messages to give the AI Judge full conversation context
+  const lastThree = Array.from(elements).slice(-3).map(el => el.innerText.trim());
+  return lastThree.join("\n\n---\n\n").substring(0, 1500);
 }
 
 // ── Smarter task type detection ──────────────────────────────────────────────
@@ -57,7 +52,6 @@ function detectTaskType(intent, response) {
   const i = intent.toLowerCase();
   const r = response.toLowerCase();
 
-  // Script detection — check INTENT first, before anything else
   const scriptIntentSignals = [
     "youtube script", "yt script", "video script", "write a script",
     "write me a script", "5 minute script", "minute youtube", "blog post",
@@ -65,29 +59,19 @@ function detectTaskType(intent, response) {
   ];
   if (scriptIntentSignals.some(s => i.includes(s))) return "script";
 
-  // Medical — intent only
   const medicalIntent = ["dosage", "dose", "medicine", "medication", "symptom",
     "diagnosis", "treatment", "disease", "paracetamol", "ibuprofen",
     "antibiotic", "prescription", "medical", "doctor", "patient", "surgery"];
   if (medicalIntent.some(w => i.includes(w))) return "medical";
 
-  // Legal — intent only
   const legalIntent = ["law", "legal", "lawyer", "contract", "lawsuit",
     "attorney", "jurisdiction", "rights", "liability", "sue", "court"];
   if (legalIntent.some(w => i.includes(w))) return "legal";
 
-  // Code — only if response has actual code patterns (not just punctuation)
   const codePatterns = [
-    /def [a-z_]+\(/,           // Python function
-    /function [a-z_]+\(/,      // JS function
-    /^import [a-z]/m,          // import statement
-    /^from [a-z]/m,            // from import
-    /class [A-Z]/,             // class definition
-    /\bconst \w+ =/,           // JS const
-    /\blet \w+ =/,             // JS let
-    /\bvar \w+ =/,             // JS var
-    /```(python|javascript|js|ts|java|cpp|c\+\+)/i,  // code fence with language
-    /SELECT .+ FROM /i,        // SQL
+    /def [a-z_]+\(/, /function [a-z_]+\(/, /^import [a-z]/m, /^from [a-z]/m,
+    /class [A-Z]/, /\bconst \w+ =/, /\blet \w+ =/, /\bvar \w+ =/,
+    /```(python|javascript|js|ts|java|cpp|c\+\+)/i, /SELECT .+ FROM /i,
   ];
   if (codePatterns.some(p => p.test(r))) return "code";
 
@@ -175,12 +159,9 @@ function showPanel(panel, result, errorMsg, taskType) {
     panel.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="font-weight:700;font-size:14px;color:#f59e0b">⚠ Zerify</div>
-        <div id="zerify-close-err" style="cursor:pointer;color:#666;font-size:18px">×</div>
+        <div id="zerify-close-btn" style="cursor:pointer;color:#666;font-size:18px">×</div>
       </div>
       <div style="color:#9ca3af;font-size:12px;line-height:1.5">${errorMsg}</div>`;
-      
-    // Secure listener
-    document.getElementById('zerify-close-err').addEventListener('click', () => panel.style.display = 'none');
     return;
   }
 
@@ -191,7 +172,6 @@ function showPanel(panel, result, errorMsg, taskType) {
   const conf = Math.round((result.confidence || 0) * 100);
   const displayType = taskType || result.task_type || "text";
 
-  // Store globally for copy button
   window._zerifyRetryPrompt = result.retry_prompt || '';
   
   let retryHtml = (result.retry_prompt || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -238,7 +218,7 @@ function showPanel(panel, result, errorMsg, taskType) {
         <div style="font-weight:700;font-size:14px">Zerify</div>
         <div style="background:#1f1f2e;color:#7c3aed;font-size:10px;padding:2px 6px;border-radius:4px;font-family:monospace">${displayType}</div>
       </div>
-      <div id="zerify-close-main" style="cursor:pointer;color:#555;font-size:20px;padding:0 4px">×</div>
+      <div id="zerify-close-btn" style="cursor:pointer;color:#555;font-size:20px;padding:0 4px">×</div>
     </div>
 
     <div style="background:${verified ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'};
@@ -261,43 +241,42 @@ function showPanel(panel, result, errorMsg, taskType) {
     </div>
   `;
 
-  // ── Secure Event Listeners (Bypasses ChatGPT Security Blocks) ──
-  
-  // Close Button
-  document.getElementById('zerify-close-main').addEventListener('click', () => {
-    panel.style.display = 'none';
-  });
+  // ── FEATURE: Bulletproof Event Delegation ──────────────────────────────────
+  panel.onclick = function(event) {
+    const target = event.target;
 
-  // Dashboard Link
-  document.getElementById('zerify-dash-link').addEventListener('click', () => {
-    window.open('[https://zerify-infra.onrender.com/dashboard](https://zerify-infra.onrender.com/dashboard)', '_blank');
-  });
+    // 1. Cross / Close Button
+    if (target.id === 'zerify-close-btn') {
+      panel.style.display = 'none';
+    }
 
-  // Copy Button
-  const copyBtn = document.getElementById('zerify-copy-btn');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', () => {
+    // 2. Dashboard Link
+    if (target.id === 'zerify-dash-link') {
+      window.open('[https://zerify-infra.onrender.com/dashboard](https://zerify-infra.onrender.com/dashboard)', '_blank');
+    }
+
+    // 3. Copy Fix Prompt Button
+    if (target.id === 'zerify-copy-btn') {
       const text = window._zerifyRetryPrompt;
       if (!text) return;
       
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
-          copyBtn.textContent = "✓ Copied!";
-          copyBtn.style.background = "#14532d";
+          target.textContent = "✓ Copied!";
+          target.style.background = "#14532d";
           setTimeout(() => {
-            copyBtn.textContent = "📋 Copy fix prompt";
-            copyBtn.style.background = "#166534";
+            target.textContent = "📋 Copy fix prompt";
+            target.style.background = "#166534";
           }, 2000);
-        }).catch(() => zerifyFallbackCopy(text));
+        }).catch(() => zerifyFallbackCopy(text, target));
       } else {
-        zerifyFallbackCopy(text);
+        zerifyFallbackCopy(text, target);
       }
-    });
-  }
+    }
+  };
 }
 
-// Global fallback function for older browsers
-function zerifyFallbackCopy(text) {
+function zerifyFallbackCopy(text, btnElement) {
   const ta = document.createElement('textarea');
   ta.value = text;
   ta.style.position = 'fixed';
@@ -306,10 +285,9 @@ function zerifyFallbackCopy(text) {
   ta.select();
   document.execCommand('copy');
   document.body.removeChild(ta);
-  const btn = document.getElementById('zerify-copy-btn');
-  if (btn) {
-    btn.textContent = "✓ Copied!";
-    setTimeout(() => { btn.textContent = "📋 Copy fix prompt"; }, 2000);
+  if (btnElement) {
+    btnElement.textContent = "✓ Copied!";
+    setTimeout(() => { btnElement.textContent = "📋 Copy fix prompt"; }, 2000);
   }
 }
 
