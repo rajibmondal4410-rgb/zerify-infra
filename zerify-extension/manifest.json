@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Zerify — Verify AI Outputs",
+  "name": "Zerify — AI Verification & Hallucination Blocker",
   "version": "1.0.0",
-  "description": "Zerify verifies that AI did what it claimed. Adds verification to ChatGPT, Claude, and Gemini.",
+  "description": "Stop trusting AI blindly. Catch hallucinations and hidden wrong answers instantly & fix code, medical, and legal errors with Zerify",
   "permissions": [
     "activeTab",
     "storage"

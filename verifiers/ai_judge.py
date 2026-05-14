@@ -36,7 +36,7 @@ if GEMINI_KEYS:
         import google.generativeai as genai
         for key in GEMINI_KEYS:
             genai.configure(api_key=key)
-            GEMINI_MODELS.append(genai.GenerativeModel('gemini-1.5-flash'))
+            GEMINI_MODELS.append(genai.GenerativeModel('gemini-2.5-flash'))
     except ImportError:
         pass
 
@@ -264,29 +264,43 @@ def run_ai_judge(intent: str, ai_claim: str, output: str, task_type: str = "text
         exec_result=exec_result
     )
 
-    # Try primary provider, fallback to the other if it fails
-    provider_type, provider = _get_provider()
+    raw = None
+
+    # Step 1: Shuffle and try all Groq keys until one works
+    import random
+    groq_pool = list(GROQ_CLIENTS)
+    random.shuffle(groq_pool)
     
-    try:
-        raw = _call_provider(provider_type, provider, prompt)
-    except Exception as e:
-        # Fallback to other provider
-        print(f"[Zerify] {provider_type} failed ({e}), trying fallback")
+    for client in groq_pool:
         try:
-            fallback_type = "gemini" if provider_type == "groq" else "groq"
-            if fallback_type == "groq" and GROQ_CLIENTS:
-                raw = _call_provider("groq", random.choice(GROQ_CLIENTS), prompt)
-            elif fallback_type == "gemini" and GEMINI_MODELS:
-                raw = _call_provider("gemini", random.choice(GEMINI_MODELS), prompt)
-            else:
-                raise Exception("All providers failed")
-        except Exception as e2:
-            return {
-                "verified": False,
-                "confidence": 0.5,
-                "reason": "Verification service temporarily unavailable",
-                "retry_prompt": f"Please redo this task carefully: {intent}"
-            }
+            raw = _call_provider("groq", client, prompt)
+            break  # Success! Exit the loop immediately
+        except Exception as e:
+            print(f"[Zerify] Groq key failed ({e}), trying next...")
+            continue
+
+    # Step 2: If ALL Groq keys fail, fallback to Gemini keys
+    if not raw:
+        print("[Zerify] All Groq keys failed. Falling back to Gemini.")
+        gemini_pool = list(GEMINI_MODELS)
+        random.shuffle(gemini_pool)
+        
+        for model in gemini_pool:
+            try:
+                raw = _call_provider("gemini", model, prompt)
+                break  # Success! Exit the loop immediately
+            except Exception as e:
+                print(f"[Zerify] Gemini key failed ({e}), trying next...")
+                continue
+
+    # Step 3: If absolutely everything is dead, return the graceful error
+    if not raw:
+        return {
+            "verified": False,
+            "confidence": 0.5,
+            "reason": "Verification service temporarily unavailable",
+            "retry_prompt": f"Please redo this task carefully: {intent}"
+        }
 
     try:
         result = _parse_json(raw)
