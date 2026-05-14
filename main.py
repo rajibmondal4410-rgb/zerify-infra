@@ -1,3 +1,4 @@
+from fastapi.responses import HTMLResponse
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -340,3 +341,36 @@ def _run_verification(req: VerifyRequest) -> dict:
             "retry_prompt": "",
             "cost": "$0"
         }
+    
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy_policy():
+    return """
+    <html>
+        <head>
+            <title>Zerify Privacy Policy</title>
+            <style>
+                body { font-family: sans-serif; padding: 50px; line-height: 1.6; max-width: 800px; margin: auto; background-color: #f9f9f9; }
+                h1 { color: #7c3aed; }
+                .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Privacy Policy for Zerify</h1>
+                <p><strong>Last Updated: May 14, 2026</strong></p>
+                <p>Zerify is committed to your privacy. This policy explains our data practices.</p>
+                
+                <h3>1. Data Usage</h3>
+                <p>We process AI-generated content and your prompts solely to identify hallucinations. We do not store this data permanently on our servers.</p>
+                
+                <h3>2. No Data Selling</h3>
+                <p>We do not sell, trade, or transfer your data to any third parties.</p>
+                
+                <h3>3. Required Permissions</h3>
+                <p>The 'activeTab' and 'storage' permissions are used only to show the verification UI and handle session states.</p>
+                
+                <p>For support: <strong>rajibmondal4410@gmail.com</strong></p>
+            </div>
+        </body>
+    </html>
+    """
